@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4DoF Robot Arm Controller v0.2.1-1</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .version { font-size: 0.8em; color: #666; }
+        .model-container { height: 80vh; margin-bottom: 20px; border: 1px solid #ccc; }
+        .controls { display: flex; flex-direction: column; gap: 20px; }
+        
+        /* Slider controls */
+        .sliders-container { 
+            display: flex; 
+            flex-direction: row; 
+            flex-wrap: wrap; 
+            gap: 10px; 
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .slider-group { 
+            display: flex; 
+            align-items: center;
+            flex: 1; 
+            min-width: 200px;
+        }
+        .servo-label { width: 60px; }
+        .angle-display { width: 50px; text-align: right; padding-right: 10px; }
+        input[type="range"] { flex-grow: 1; }
+        
+        /* Joystick controls */
+        .joysticks-container { display: flex; justify-content: space-around; }
+        .joystick { position: relative; width: 150px; height: 150px; border-radius: 50%; background: #eee; }
+        .joystick-handle { position: absolute; width: 50px; height: 50px; border-radius: 50%; background: #555; 
+                         top: 50px; left: 50px; cursor: pointer; }
+        .joystick-label { text-align: center; margin-top: 5px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>4DoF Robot Arm Controller</h1>
+            <span class="version">v0.2.1-1</span>
+        </div>
+        
+        <div id="model-container" class="model-container"></div>
+        
+        <div class="controls">
+            <h2>Control Panel</h2>
+            
+            <!-- Slider Controls -->
+            <div class="sliders-container">
+                <div class="slider-group">
+                    <span class="servo-label">Servo 0:</span>
+                    <span id="angle0" class="angle-display">135°</span>
+                    <input type="range" id="channel0" min="0" max="270" value="135">
+                </div>
+                <div class="slider-group">
+                    <span class="servo-label">Servo 1:</span>
+                    <span id="angle1" class="angle-display">135°</span>
+                    <input type="range" id="channel1" min="0" max="270" value="135">
+                </div>
+                <div class="slider-group">
+                    <span class="servo-label">Servo 2:</span>
+                    <span id="angle2" class="angle-display">135°</span>
+                    <input type="range" id="channel2" min="0" max="270" value="135">
+                </div>
+                <div class="slider-group">
+                    <span class="servo-label">Servo 3:</span>
+                    <span id="angle3" class="angle-display">135°</span>
+                    <input type="range" id="channel3" min="0" max="270" value="135">
+                </div>
+            </div>
+            
+            <!-- Joystick Controls -->
+            <h3>Joystick Controls</h3>
+            <div class="joysticks-container">
+                <div class="joystick-wrapper">
+                    <div id="left-joystick" class="joystick">
+                        <div id="left-handle" class="joystick-handle"></div>
+                    </div>
+                    <div class="joystick-label">Left Joystick<br>X: Ch0, Y: Ch1</div>
+                </div>
+                <div class="joystick-wrapper">
+                    <div id="right-joystick" class="joystick">
+                        <div id="right-handle" class="joystick-handle"></div>
+                    </div>
+                    <div class="joystick-label">Right Joystick<br>X: Ch3, Y: Ch2</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/robot_arm.js"></script>
+</body>
+</html>

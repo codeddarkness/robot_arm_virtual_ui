@@ -1,0 +1,198 @@
+# Robot Arm Virtual UI - Project Handoff
+
+## Project Overview
+
+This document provides a comprehensive overview of the Robot Arm Virtual UI project for handoff to another development team. The project consists of a web-based 3D interface for controlling a 4-Degree-of-Freedom (4DoF) robot arm, with both stable and development versions.
+
+## Current Versions
+
+- **Stable Version (v0.2.3-1)**: Production-ready version with core functionality
+- **Development Version (v0.3.1-1)**: Enhanced version with additional features for testing
+
+## Project Structure
+
+```
+robot_arm_virtual_ui/
+├── run.sh                 # Main run script
+├── robot_arm_app.py       # Symlink to src/robot_arm_app.py
+├── requirements.txt       # Python dependencies
+├── README.md              # Project documentation
+├── src/                   # Source code
+│   ├── robot_arm_app.py   # Main Flask application
+│   ├── dev_route.py       # Development route handler
+│   ├── static/            # Static web assets
+│   │   ├── robot_arm.js     # JavaScript for stable version
+│   │   └── dev/             # Development version assets
+│   │       └── robot_arm.js   # JavaScript for dev version
+│   └── templates/         # HTML templates
+│       ├── index.html       # Stable version HTML
+│       └── dev/             # Development version templates
+│           └── index.html     # Development version HTML
+├── utils/                 # Utility scripts
+├── venv/                  # Python virtual environment
+└── backups/               # Backup directory
+```
+
+## Key Technologies
+
+- **Backend**: Python 3.x with Flask for the web server
+- **3D Rendering**: Three.js for 3D visualization
+- **UI**: HTML5, CSS3, and JavaScript for the user interface
+- **Communication**: RESTful API for servo control
+
+## Feature Comparison
+
+### Stable Version (v0.2.3-1)
+
+- 3D visualization of a 4DoF robot arm
+- Joystick and slider controls for servo positioning
+- Automatic port selection
+- Increased height for 3D render space
+- Zoom controls for camera positioning
+- Link to development version
+
+### Development Version (v0.3.1-1)
+
+All features from the stable version, plus:
+- Dark mode toggle
+- Preset position buttons (left, center, right)
+- Random movement generator with fluid transitions
+- Reset button for default position
+- MPU6050 sensor simulation
+- Improved joystick behavior (return to center when released)
+- Link to stable version
+
+## Technical Details
+
+### Robot Arm Configuration
+
+The robot arm has 4 servos (4 Degrees of Freedom):
+- Channel 0: Base rotation (Y-axis, left/right)
+- Channel 1: Lower arm joint (Z-axis, up/down)
+- Channel 2: Upper arm joint (Z-axis, up/down)
+- Channel 3: Gripper rotation (Y-axis, left/right)
+
+Each servo has a range of 0-270 degrees, with 135 degrees as the center position.
+
+### Control Mechanisms
+
+1. **Sliders**: Direct control of each servo angle
+2. **Joysticks**:
+   - Left joystick: X controls channel 0, Y controls channel 1
+   - Right joystick: Y controls channel 2, X controls channel 3
+
+3. **Preset Buttons** (Dev version only):
+   - Move Left [000]: Sets all servos to 0 degrees
+   - Center [135]: Sets all servos to 135 degrees
+   - Move Right [270]: Sets all servos to 270 degrees
+
+4. **Random Movement** (Dev version only):
+   - Generates 10 random positions
+   - Smooth transitions between positions
+   - 1-second hold at each position
+
+### Animation System
+
+The development version uses a sophisticated animation system:
+- Target angles and current angles are tracked separately
+- Smooth transitions between positions with configurable speed
+- Timing controls for holding at positions
+
+### MPU6050 Simulation (Dev version only)
+
+A virtual MPU6050 sensor attached to servo/channel 3 provides:
+- Accelerometer readings (X, Y, Z) based on orientation
+- Gyroscope readings (X, Y, Z) with simulated movement
+
+## API Endpoints
+
+- **GET /api/servo**: Retrieves current servo positions
+- **POST /api/servo**: Updates servo positions
+- **GET /dev**: Accesses development version
+
+## Development Process
+
+The project follows an iterative development approach:
+1. New features are added to the development version
+2. Features are tested and refined
+3. Stable features are backported to the stable version
+
+## Development Guidelines
+
+### Coding Standards
+
+- **JavaScript**: ES6 syntax with clear function names and comments
+- **Python**: PEP 8 style guide with descriptive variable names
+- **HTML/CSS**: Semantic elements with BEM-like class naming
+
+### File Structure
+
+- Keep stable and development versions in separate directories
+- Use the existing directory structure for consistency
+- Place new static assets in the appropriate /static or /static/dev directory
+
+### Versioning
+
+Version numbers follow the format: `vX.Y.Z-N` where:
+- X: Major version (significant changes)
+- Y: Minor version (new features)
+- Z: Patch version (bug fixes)
+- N: Build number
+
+### Contribution Workflow
+
+1. Create a backup of the current code
+2. Make changes in development version first
+3. Test thoroughly before updating stable version
+4. Document all changes
+
+## Development Roadmap
+
+Planned future enhancements:
+1. Position recording and playback
+2. Custom sequence programming
+3. Inverse kinematics support
+4. Additional sensor simulations
+5. Physical hardware integration
+
+## Patching Process
+
+When creating patches:
+1. Create separate scripts for stable and development versions
+2. Split large scripts into multiple artifacts to avoid cutoff
+3. Include backup creation in each script
+4. Update version numbers appropriately
+5. Test both versions after applying patches
+
+## Key JavaScript Functions
+
+- `initScene()`: Sets up the Three.js scene
+- `createRobotArm()`: Creates the 3D robot arm model
+- `updateArmPosition()`: Updates the arm position based on servo angles
+- `animateToTarget()`: Animates movement to target position
+- `initJoysticks()`: Sets up joystick controls
+- `initSliders()`: Sets up slider controls
+- `initButtons()`: Sets up buttons and additional controls
+
+## Key Python Functions
+
+- `app.route('/')`: Main route for stable version
+- `app.route('/dev')`: Route for development version
+- `get_servo_positions()`: API endpoint to get servo states
+- `update_servo_positions()`: API endpoint to update servo states
+- `find_available_port()`: Finds an available port for the web server
+
+## Troubleshooting
+
+- **Port conflicts**: The application will automatically select the next available port
+- **Flask dependency issues**: Make sure to use compatible versions as specified in requirements.txt
+- **3D rendering issues**: Check browser WebGL support
+
+## Contact Information
+
+For questions or assistance, contact the previous development team:
+- [Contact information placeholder]
+
+---
+
+This handoff document provides the essential information needed to continue development on the Robot Arm Virtual UI project. The existing codebase is well-structured and documented, making it straightforward to add new features while maintaining compatibility with both versions.

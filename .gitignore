@@ -1,0 +1,4 @@
+*.log
+backups/*
+src/__pycache__/
+updaters/*

@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4DoF Robot Arm Controller v0.3.1-1 (Dev)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        /* Base Styles with Dark Mode Support */
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --header-color: #444;
+            --card-bg: #fff;
+            --card-shadow: rgba(0,0,0,0.1);
+            --slider-bg: #f8f8f8;
+            --border-color: #ddd;
+            --joystick-bg: #eee;
+            --joystick-border: #ddd;
+            --joystick-handle: linear-gradient(145deg, #444 0%, #222 100%);
+            --button-bg: #4a89dc;
+            --button-text: white;
+            --button-hover: #3a79cc;
+            --mpu-window-bg: #f0f0f0;
+            --version-bg: #e9e9e9;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --header-color: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --card-shadow: rgba(0,0,0,0.4);
+            --slider-bg: #2d2d2d;
+            --border-color: #333;
+            --joystick-bg: #2d2d2d;
+            --joystick-border: #444;
+            --joystick-handle: linear-gradient(145deg, #666 0%, #444 100%);
+            --button-bg: #2d5986;
+            --button-text: #e0e0e0;
+            --button-hover: #3a79cc;
+            --mpu-window-bg: #2d2d2d;
+            --version-bg: #333;
+}
+        
+        * { box-sizing: border-box; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        /* Layout */
+        .container { 
+            width: 100%;
+            max-width: 1200px; 
+            margin: 0 auto;
+            padding: 15px;
+        }
+        
+        /* Header */
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            color: var(--header-color);
+            text-align: center;
+            width: 100%;
+        }
+        .version { 
+            font-size: 0.8em; 
+            color: var(--text-color);
+            padding: 3px 8px;
+            background-color: var(--version-bg);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .version a {
+            text-decoration: none;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .version a:hover {
+            background-color: var(--button-hover);
+        }
+        
+        /* Theme Toggle */
+        .theme-toggle {
+            margin-left: 10px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--text-color);
+            padding: 5px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        .theme-toggle:hover {
+            background-color: var(--slider-bg);
+        }
+        
+        /* 3D Model Container - TALLER */
+        .model-container { 
+            width: 100%;
+            height: min(75vh, 600px); /* Made taller */
+            margin-bottom: 20px; 
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 3px 10px var(--card-shadow);
+            background-color: var(--card-bg);
+        }
+        
+        /* Zoom Controls */
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 10;
+        }
+        .zoom-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.7);
+            border: 1px solid var(--border-color);
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .zoom-button:hover {
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+        [data-theme="dark"] .zoom-button {
+            background-color: rgba(50, 50, 50, 0.7);
+            color: var(--button-text);
+        }
+        [data-theme="dark"] .zoom-button:hover {
+            background-color: rgba(50, 50, 50, 0.9);
+        }
+        
+        /* Control Section */
+        .controls { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 3px 10px var(--card-shadow);
+        }
+        .controls h2, .controls h3 {
+            margin-top: 0;
+            color: var(--header-color);
+            text-align: center;
+        }
+        
+        /* Top Controls Section */
+        .top-controls {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        .title-and-buttons {
+            flex: 3;
+        }
+        
+        /* Button Controls - Single Row */
+        .button-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .control-button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+            flex: 1;
+            min-width: max-content;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .control-button:hover {
+            background-color: var(--button-hover);
+        }
+
+        /* MPU6050 Sensor Display - Moved to top right */
+        .mpu-container {
+            background-color: var(--mpu-window-bg);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            flex: 2;
+            max-width: 300px;
+            align-self: flex-start;
+        }
+        .mpu-title {
+            margin-top: 0;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .mpu-title span {
+            font-size: 0.75rem;
+            padding: 2px 5px;
+            background-color: var(--version-bg);
+            border-radius: 4px;
+        }
+        .mpu-readings {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+        .mpu-column {
+            flex: 1;
+            min-width: 120px;
+        }
+        .mpu-reading {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            font-family: monospace;
+        }
+        .mpu-reading span:first-child {
+            font-weight: bold;
+        }
+        
+        /* Slider Controls */
+        .sliders-container { 
+            display: flex; 
+            flex-direction: row; 
+            flex-wrap: wrap; 
+            gap: 15px; 
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .slider-group { 
+            display: flex; 
+            align-items: center;
+            flex: 1 1 200px; 
+            min-width: 200px;
+            background-color: var(--slider-bg);
+            padding: 10px;
+            border-radius: 6px;
+            transition: background-color 0.3s;
+        }
+        .servo-label { 
+            width: 60px;
+            font-weight: bold;
+        }
+        .angle-display { 
+            width: 50px; 
+            text-align: right; 
+            padding-right: 10px;
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+        input[type="range"] { 
+            flex-grow: 1;
+            height: 6px;
+            background-color: var(--border-color);
+            border-radius: 3px;
+        }
+        
+        /* Joystick Controls */
+        .joysticks-container { 
+            display: flex; 
+            flex-wrap: wrap;
+            justify-content: space-around; 
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+        .joystick-wrapper {
+            flex: 0 1 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .joystick { 
+            position: relative; 
+            width: clamp(100px, 20vw, 150px);
+            height: clamp(100px, 20vw, 150px);
+            border-radius: 50%; 
+            background: var(--joystick-bg);
+            border: 3px solid var(--joystick-border);
+            box-shadow: inset 0 3px 8px var(--card-shadow);
+            transition: background 0.3s, border 0.3s;
+        }
+        .joystick-handle { 
+            position: absolute; 
+            width: 33%; 
+            height: 33%; 
+            border-radius: 50%; 
+            background: var(--joystick-handle);
+            top: 33%; 
+            left: 33%; 
+            cursor: pointer;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.3);
+            transition: left 0.3s, top 0.3s;
+        }
+        .joystick-label { 
+            text-align: center; 
+            margin-top: 10px; 
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .top-controls {
+                flex-direction: column;
+            }
+            .mpu-container {
+                max-width: 100%;
+                margin-top: 10px;
+            }
+            .button-controls {
+                flex-wrap: wrap;
+            }
+            .control-button {
+                flex: 1 1 auto;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .sliders-container {
+                flex-direction: column;
+            }
+            .slider-group {
+                min-width: unset;
+            }
+            .joysticks-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .joystick {
+                width: 150px;
+                height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>4DoF Robot Arm Controller</h1>
+            <div style="display: flex; align-items: center;">
+                <span class="version">v0.3.1-1 (Dev) <a href="/">STABLE</a></span>
+                <button id="theme-toggle" class="theme-toggle" title="Toggle dark/light mode">🌓</button>
+            </div>
+        </div>
+        
+        <div id="model-container" class="model-container">
+            <div class="zoom-controls">
+                <button id="zoom-in" class="zoom-button">+</button>
+                <button id="zoom-out" class="zoom-button">-</button>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="top-controls">
+                <div class="title-and-buttons">
+                    <h2>Control Panel</h2>
+                    <!-- Button Controls - Single Row -->
+                    <div class="button-controls">
+                        <button id="reset-button" class="control-button">Reset Position</button>
+                        <button id="random-button" class="control-button">Random Movement</button>
+                        <button id="preset-left" class="control-button">Move Left [000]</button>
+                        <button id="preset-center" class="control-button">Center [135]</button>
+                        <button id="preset-right" class="control-button">Move Right [270]</button>
+                    </div>
+                </div>
+                
+                <!-- MPU6050 Sensor Display - Moved to top right -->
+                <div class="mpu-container">
+                    <h3 class="mpu-title">MPU6050 Sensor <span>On Servo 3</span></h3>
+                    <div class="mpu-readings">
+                        <div class="mpu-column">
+                            <div class="mpu-reading">
+                                <span>ACCEL X:</span>
+                                <span id="accel-x">0.00</span>
+                            </div>
+                            <div class="mpu-reading">
+                                <span>ACCEL Y:</span>
+                                <span id="accel-y">0.00</span>
+                            </div>
+                            <div class="mpu-reading">
+                                <span>ACCEL Z:</span>
+                                <span id="accel-z">0.00</span>
+                            </div>
+                        </div>
+                        <div class="mpu-column">
+                            <div class="mpu-reading">
+                                <span>GYRO X:</span>
+                                <span id="gyro-x">0.00</span>
+                            </div>
+                            <div class="mpu-reading">
+                                <span>GYRO Y:</span>
+                                <span id="gyro-y">0.00</span>
+                            </div>
+                            <div class="mpu-reading">
+                                <span>GYRO Z:</span>
+                                <span id="gyro-z">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Slider Controls -->
+            <h3>Manual Controls</h3>
+            <div class="sliders-container">
+                <div class="slider-group">
+                    <span class="servo-label">Servo 0:</span>
+                    <span id="angle0" class="angle-display">135°</span>
+                    <input type="range" id="channel0" min="0" max="270" value="135">
+                </div>
+                <div class="slider-group">
+                    <span class="servo-label">Servo 1:</span>
+                    <span id="angle1" class="angle-display">135°</span>
+                    <input type="range" id="channel1" min="0" max="270" value="135">
+                </div>
+                <div class="slider-group">
+                    <span class="servo-label">Servo 2:</span>
+                    <span id="angle2" class="angle-display">135°</span>
+                    <input type="range" id="channel2" min="0" max="270" value="135">
+                </div>
+                <div class="slider-group">
+                    <span class="servo-label">Servo 3:</span>
+                    <span id="angle3" class="angle-display">135°</span>
+                    <input type="range" id="channel3" min="0" max="270" value="135">
+                </div>
+            </div>
+            
+            <!-- Joystick Controls -->
+            <h3>Joystick Controls</h3>
+            <div class="joysticks-container">
+                <div class="joystick-wrapper">
+                    <div id="left-joystick" class="joystick">
+                        <div id="left-handle" class="joystick-handle"></div>
+                    </div>
+                    <div class="joystick-label">Left Joystick<br>X: Ch0, Y: Ch1</div>
+                </div>
+                <div class="joystick-wrapper">
+                    <div id="right-joystick" class="joystick">
+                        <div id="right-handle" class="joystick-handle"></div>
+                    </div>
+                    <div class="joystick-label">Right Joystick<br>X: Ch3, Y: Ch2</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/dev/robot_arm.js"></script>
+</body>
+</html>
