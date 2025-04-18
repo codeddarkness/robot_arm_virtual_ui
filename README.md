@@ -18,7 +18,7 @@ A web-based 3D interface for controlling a 4DoF (4 Degrees of Freedom) robot arm
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/robot-arm-virtual-ui.git
+git clone https://github.com/codeddarkness/robot-arm-virtual-ui.git
 cd robot-arm-virtual-ui
 
 # Run the application
@@ -38,7 +38,7 @@ Then open your browser and navigate to the URL displayed in the console (typical
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/robot-arm-virtual-ui.git
+   git clone https://github.com/codeddarkness/robot-arm-virtual-ui.git
    cd robot-arm-virtual-ui
    ```
 
