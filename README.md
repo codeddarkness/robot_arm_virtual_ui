@@ -2,7 +2,8 @@
 
 A web-based 3D interface for controlling a 4DoF (4 Degrees of Freedom) robot arm with real-time visualization.
 
-![Robot Arm Virtual UI Screenshot](https://via.placeholder.com/800x450.png?text=Robot+Arm+Virtual+UI)
+![Robot Arm Virtual UI dashboard](stable_dashboard.png "main dashboard")
+![Robot Arm Virtual UI dev dashboard](dev_dashboard.png "development dashboard")
 
 ## Features
 
