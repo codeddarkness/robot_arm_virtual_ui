@@ -1,5 +1,15 @@
+# Core web framework
 Flask==2.3.3
 Werkzeug==2.3.7
+
+# Hardware libraries (optional - will fall back to simulation if not available)
+Adafruit-PCA9685==1.0.1
+mpu6050-raspberrypi==1.2
+
+# Input device handling
+evdev==1.6.1
+
+# Additional dependencies
 Jinja2>=3.0
 itsdangerous>=2.0
 click>=7.1.2

@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Robot Arm - Integrated Control</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .nav-button {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .nav-button:hover {
+            background: #3182ce;
+        }
+        
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .sync-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #48bb78;
+        }
+        
+        .sync-indicator.disabled {
+            background: #f56565;
+        }
+        
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .model-container { 
+            height: 400px; 
+            margin-bottom: 20px; 
+            border: 2px solid #e2e8f0; 
+            border-radius: 10px;
+            background: #f7fafc;
+        }
+        
+        .controls { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+        }
+        
+        .joysticks-container { 
+            display: flex; 
+            justify-content: space-around; 
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .joystick { 
+            position: relative; 
+            width: 150px; 
+            height: 150px; 
+            border-radius: 50%; 
+            background: #e2e8f0;
+            border: 3px solid #cbd5e0;
+        }
+        
+        .joystick-handle { 
+            position: absolute; 
+            width: 50px; 
+            height: 50px; 
+            border-radius: 50%; 
+            background: #4299e1;
+            top: 50px; 
+            left: 50px; 
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .joystick-label { 
+            text-align: center; 
+            margin-top: 10px; 
+            font-weight: bold;
+            color: #2d3748;
+        }
+        
+        .sliders-container { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px;
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .slider-group { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px;
+        }
+        
+        .servo-label { 
+            width: 80px; 
+            font-weight: bold;
+            color: #2d3748;
+        }
+        
+        .angle-display { 
+            width: 60px; 
+            text-align: right; 
+            padding-right: 10px;
+            font-family: 'Courier New', monospace;
+            background: #e2e8f0;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        
+        input[type="range"] { 
+            flex-grow: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: #e2e8f0;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4299e1;
+            cursor: pointer;
+        }
+        
+        .status-panel {
+            background: #2d3748;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .control-btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .control-btn:hover {
+            background: #3182ce;
+        }
+        
+        .control-btn.reset {
+            background: #ed8936;
+        }
+        
+        .control-btn.reset:hover {
+            background: #dd7410;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>🎮 Virtual Robot Arm Control</h1>
+            <p>Interactive 3D simulation with real-time hardware sync</p>
+        </div>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <div class="sync-status">
+                <span class="sync-indicator" id="sync-indicator"></span>
+                <span id="sync-text">Sync: Loading...</span>
+            </div>
+            <a href="/" class="nav-button">← Back to Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="status-panel" id="status-display">
+            Initializing virtual robot arm...
+        </div>
+        
+        <div id="model-container" class="model-container"></div>
+        
+        <div class="controls">
+            <h2>Joystick Controls</h2>
+            <div class="joysticks-container">
+                <div class="joystick-wrapper">
+                    <div id="left-joystick" class="joystick">
+                        <div id="left-handle" class="joystick-handle"></div>
+                    </div>
+                    <div class="joystick-label">Left Joystick<br>X: Ch0, Y: Ch1</div>
+                </div>
+                <div class="joystick-wrapper">
+                    <div id="right-joystick" class="joystick">
+                        <div id="right-handle" class="joystick-handle"></div>
+                    </div>
+                    <div class="joystick-label">Right Joystick<br>X: Ch3, Y: Ch2</div>
+                </div>
+            </div>
+            
+            <h2>Slider Controls</h2>
+            <div class="sliders-container">
+                <div class="slider-group">
+                    <span class="servo-label">Servo 0:</span>
+                    <span id="angle0" class="angle-display">135°</span>
+                    <input type="range" id="channel0" min="0" max="270" value="135">
+                </div>
+                <div class="slider-group">
+                    <span class="servo-label">Servo 1:</span>
+                    <span id="angle1" class="angle-display">135°</span>
+                    <input type="range" id="channel1" min="0" max="270" value="135">
+                </div>
+                <div class="slider-group">
+                    <span class="servo-label">Servo 2:</span>
+                    <span id="angle2" class="angle-display">135°</span>
+                    <input type="range" id="channel2" min="0" max="270" value="135">
+                </div>
+                <div class="slider-group">
+                    <span class="servo-label">Servo 3:</span>
+                    <span id="angle3" class="angle-display">135°</span>
+                    <input type="range" id="channel3" min="0" max="270" value="135">
+                </div>
+            </div>
+            
+            <div class="control-buttons">
+                <button class="control-btn" onclick="resetToCenter()">Reset to Center</button>
+                <button class="control-btn reset" onclick="resetToZero()">Reset to Zero</button>
+                <button class="control-btn" onclick="toggleSync()">Toggle Sync</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables (same as original robot_arm.js)
+        let scene, camera, renderer;
+        let armBase, armLower, armUpper, armGripper;
+        let isDragging = { left: false, right: false };
+        let servoAngles = { channel0: 135, channel1: 135, channel2: 135, channel3: 135 };
+        let updateTimeout;
+        let systemState = {{ state | tojson }};
+
+        // Initialize Three.js scene (same as original)
+        function initScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf7fafc);
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / 400, 0.1, 1000);
+            camera.position.set(0, 5, 10);
+            camera.lookAt(0, 0, 0);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(document.getElementById('model-container').offsetWidth, 400);
+            document.getElementById('model-container').appendChild(renderer.domElement);
+            
+            const ambientLight = new THREE.AmbientLight(0x404040, 2);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+            
+            createRobotArm();
+            
+            const groundGeometry = new THREE.PlaneGeometry(20, 20);
+            const groundMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -0.5;
+            scene.add(ground);
+            
+            window.addEventListener('resize', () => {
+                renderer.setSize(document.getElementById('model-container').offsetWidth, 400);
+                camera.aspect = document.getElementById('model-container').offsetWidth / 400;
+                camera.updateProjectionMatrix();
+            });
+            
+            animate();
+        }
+
+        // Create robot arm segments (same as original)
+        function createRobotArm() {
+            const baseGeometry = new THREE.CylinderGeometry(1, 1, 0.5, 32);
+            const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 });
+            const base = new THREE.Mesh(baseGeometry, baseMaterial);
+            base.position.y = -0.25;
+            scene.add(base);
+            
+            armBase = new THREE.Group();
+            const baseJointGeometry = new THREE.BoxGeometry(0.5, 1, 0.5);
+            const baseJointMaterial = new THREE.MeshStandardMaterial({ color: 0xdd0000 });
+            const baseJoint = new THREE.Mesh(baseJointGeometry, baseJointMaterial);
+            baseJoint.position.y = 0.5;
+            armBase.add(baseJoint);
+            scene.add(armBase);
+            
+            armLower = new THREE.Group();
+            const lowerArmGeometry = new THREE.BoxGeometry(0.4, 3, 0.4);
+            const lowerArmMaterial = new THREE.MeshStandardMaterial({ color: 0x00dd00 });
+            const lowerArm = new THREE.Mesh(lowerArmGeometry, lowerArmMaterial);
+            lowerArm.position.y = 1.5;
+            armLower.add(lowerArm);
+            armBase.add(armLower);
+            
+            armUpper = new THREE.Group();
+            const upperArmGeometry = new THREE.BoxGeometry(0.3, 2, 0.3);
+            const upperArmMaterial = new THREE.MeshStandardMaterial({ color: 0x0000dd });
+            const upperArm = new THREE.Mesh(upperArmGeometry, upperArmMaterial);
+            upperArm.position.y = 1;
+            armUpper.add(upperArm);
+            armUpper.position.y = 3;
+            armLower.add(armUpper);
+            
+            armGripper = new THREE.Group();
+            const gripperGeometry = new THREE.BoxGeometry(0.2, 0.2, 1);
+            const gripperMaterial = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
+            const gripper = new THREE.Mesh(gripperGeometry, gripperMaterial);
+            gripper.position.z = 0.5;
+            armGripper.add(gripper);
+            armGripper.position.y = 2;
+            armUpper.add(armGripper);
+            
+            updateArmPosition();
+        }
+
+        // Update arm position (same as original)
+        function updateArmPosition() {
+            armBase.rotation.y = THREE.MathUtils.degToRad(servoAngles.channel0 - 135);
+            armLower.rotation.z = THREE.MathUtils.degToRad(-1 * (servoAngles.channel1 - 135) * 0.6);
+            armUpper.rotation.z = THREE.MathUtils.degToRad(-1 * (servoAngles.channel2 - 135) * 0.6);
+            armGripper.rotation.y = THREE.MathUtils.degToRad(servoAngles.channel3 - 135);
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        // Initialize joystick controls (simplified version)
+        function initJoysticks() {
+            const leftJoystick = document.getElementById('left-joystick');
+            const leftHandle = document.getElementById('left-handle');
+            const rightJoystick = document.getElementById('right-joystick');
+            const rightHandle = document.getElementById('right-handle');
+            
+            leftHandle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                isDragging.left = true;
+            });
+            
+            rightHandle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                isDragging.right = true;
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging.left) {
+                    moveJoystick(e, leftJoystick, leftHandle, 'left');
+                }
+                if (isDragging.right) {
+                    moveJoystick(e, rightJoystick, rightHandle, 'right');
+                }
+            });
+            
+            document.addEventListener('mouseup', () => {
+                isDragging.left = false;
+                isDragging.right = false;
+            });
+            
+            // Touch support
+            leftHandle.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                isDragging.left = true;
+            });
+            
+            rightHandle.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                isDragging.right = true;
+            });
+            
+            document.addEventListener('touchmove', (e) => {
+                if (isDragging.left || isDragging.right) {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    
+                    if (isDragging.left) {
+                        moveJoystick({ clientX: touch.clientX, clientY: touch.clientY }, 
+                                     leftJoystick, leftHandle, 'left');
+                    }
+                    
+                    if (isDragging.right) {
+                        moveJoystick({ clientX: touch.clientX, clientY: touch.clientY }, 
+                                     rightJoystick, rightHandle, 'right');
+                    }
+                }
+            });
+            
+            document.addEventListener('touchend', () => {
+                isDragging.left = false;
+                isDragging.right = false;
+            });
+        }
+
+        // Move joystick (same logic as original)
+        function moveJoystick(e, joystick, handle, which) {
+            const joystickRect = joystick.getBoundingClientRect();
+            const centerX = joystickRect.left + joystickRect.width / 2;
+            const centerY = joystickRect.top + joystickRect.height / 2;
+            
+            let x = e.clientX - centerX;
+            let y = e.clientY - centerY;
+            
+            const radius = joystickRect.width / 2 - handle.offsetWidth / 2;
+            const distance = Math.sqrt(x * x + y * y);
+            
+            if (distance > radius) {
+                x = (x / distance) * radius;
+                y = (y / distance) * radius;
+            }
+            
+            handle.style.left = `${x + joystickRect.width / 2 - handle.offsetWidth / 2}px`;
+            handle.style.top = `${y + joystickRect.height / 2 - handle.offsetHeight / 2}px`;
+            
+            const normalizedX = x / radius;
+            const normalizedY = y / radius;
+            
+            let xAngle = Math.round(135 + normalizedX * 135);
+            let yAngle = Math.round(135 - normalizedY * 135);
+            
+            if (which === 'left') {
+                servoAngles.channel0 = xAngle;
+                servoAngles.channel1 = yAngle;
+                document.getElementById('channel0').value = xAngle;
+                document.getElementById('channel1').value = yAngle;
+                document.getElementById('angle0').textContent = `${xAngle}°`;
+                document.getElementById('angle1').textContent = `${yAngle}°`;
+            } else {
+                servoAngles.channel2 = yAngle;
+                servoAngles.channel3 = xAngle;
+                document.getElementById('channel2').value = yAngle;
+                document.getElementById('channel3').value = xAngle;
+                document.getElementById('angle2').textContent = `${yAngle}°`;
+                document.getElementById('angle3').textContent = `${xAngle}°`;
+            }
+            
+            updateArmPosition();
+            
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(() => {
+                sendServoUpdate();
+            }, 50);
+        }
+
+        // Initialize sliders
+        function initSliders() {
+            for (let i = 0; i < 4; i++) {
+                const slider = document.getElementById(`channel${i}`);
+                const display = document.getElementById(`angle${i}`);
+                
+                slider.addEventListener('input', function() {
+                    const value = parseInt(this.value);
+                    display.textContent = `${value}°`;
+                    servoAngles[`channel${i}`] = value;
+                    
+                    updateArmPosition();
+                    
+                    clearTimeout(updateTimeout);
+                    updateTimeout = setTimeout(() => {
+                        sendServoUpdate();
+                    }, 50);
+                });
+            }
+        }
+
+        // Send servo updates to the integrated API
+        function sendServoUpdate() {
+            fetch('/api/virtual/servo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(servoAngles)
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateStatusDisplay();
+            })
+            .catch(error => {
+                console.error('Error updating servos:', error);
+            });
+        }
+
+        // Fetch and sync with system state
+        function fetchSystemState() {
+            fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                systemState = data;
+                
+                // Update servo angles from system state
+                servoAngles = { ...systemState.virtual_arm };
+                
+                // Update UI
+                for (let i = 0; i < 4; i++) {
+                    const channel = `channel${i}`;
+                    document.getElementById(channel).value = servoAngles[channel];
+                    document.getElementById(`angle${i}`).textContent = `${servoAngles[channel]}°`;
+                }
+                
+                updateArmPosition();
+                updateSyncStatus();
+                updateStatusDisplay();
+            })
+            .catch(error => {
+                console.error('Error fetching system state:', error);
+            });
+        }
+
+        // Update sync status indicator
+        function updateSyncStatus() {
+            const indicator = document.getElementById('sync-indicator');
+            const text = document.getElementById('sync-text');
+            
+            if (systemState.sync_enabled) {
+                indicator.classList.remove('disabled');
+                text.textContent = 'Sync: Enabled';
+            } else {
+                indicator.classList.add('disabled');
+                text.textContent = 'Sync: Disabled';
+            }
+        }
+
+        // Update status display
+        function updateStatusDisplay() {
+            const status = document.getElementById('status-display');
+            const virtual = systemState.virtual_arm;
+            const physical = systemState.physical_servos;
+            const sync = systemState.sync_enabled ? 'ENABLED' : 'DISABLED';
+            
+            status.innerHTML = `
+                Virtual: Ch0:${virtual.channel0}° Ch1:${virtual.channel1}° Ch2:${virtual.channel2}° Ch3:${virtual.channel3}° | 
+                Physical: Ch0:${physical[0]}° Ch1:${physical[1]}° Ch2:${physical[2]}° Ch3:${physical[3]}° | 
+                Sync: ${sync}
+            `;
+        }
+
+        // Control functions
+        function resetToCenter() {
+            for (let i = 0; i < 4; i++) {
+                servoAngles[`channel${i}`] = 135;
+                document.getElementById(`channel${i}`).value = 135;
+                document.getElementById(`angle${i}`).textContent = '135°';
+            }
+            updateArmPosition();
+            sendServoUpdate();
+        }
+
+        function resetToZero() {
+            for (let i = 0; i < 4; i++) {
+                servoAngles[`channel${i}`] = 0;
+                document.getElementById(`channel${i}`).value = 0;
+                document.getElementById(`angle${i}`).textContent = '0°';
+            }
+            updateArmPosition();
+            sendServoUpdate();
+        }
+
+        function toggleSync() {
+            fetch('/api/sync', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    systemState.sync_enabled = data.sync_enabled;
+                    updateSyncStatus();
+                })
+                .catch(error => console.error('Sync toggle error:', error));
+        }
+
+        // Initialize everything
+        window.addEventListener('DOMContentLoaded', () => {
+            initScene();
+            initJoysticks();
+            initSliders();
+            fetchSystemState();
+            
+            // Update system state every 1 second
+            setInterval(fetchSystemState, 1000);
+        });
+    </script>
+</body>
+</html>

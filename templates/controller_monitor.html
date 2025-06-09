@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Controller Monitor - Integrated Robot</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: #2d3748;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .nav-button {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-button:hover {
+            background: #3182ce;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .status-console {
+            background: #2d3748;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 20px;
+            font-size: 12px;
+            line-height: 1.4;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .controller-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .controller-status {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #4299e1;
+        }
+
+        .controller-status.connected {
+            border-left-color: #48bb78;
+        }
+
+        .controller-status.disconnected {
+            border-left-color: #f56565;
+        }
+
+        .servo-controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .servo-monitor {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .servo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .servo-name {
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .angle-badge {
+            background: #4299e1;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .hold-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .hold-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #cbd5e0;
+        }
+
+        .hold-dot.active {
+            background: #f56565;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .direction-arrows {
+            font-size: 16px;
+            color: #4299e1;
+            font-weight: bold;
+        }
+
+        .controller-mapping {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mapping-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .mapping-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .mapping-title {
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .mapping-desc {
+            font-size: 14px;
+            color: #718096;
+        }
+
+        .speed-control {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .speed-display {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .speed-value {
+            background: #4299e1;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+
+        .global-lock {
+            background: #fed7d7;
+            border: 2px solid #f56565;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .global-lock.active {
+            display: block;
+        }
+
+        .lock-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .mpu-integration {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mpu-data {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .mpu-value {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .mpu-label {
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+
+        .mpu-number {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        @media (max-width: 768px) {
+            .controller-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .servo-controls-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>🎯 Game Controller Monitor</h1>
+            <p>Real-time controller input monitoring and servo control</p>
+        </div>
+        <a href="/" class="nav-button">← Back to Dashboard</a>
+    </div>
+
+    <div class="container">
+        <!-- Console-style status display -->
+        <div class="status-console" id="console-display">
+            LX: ○ [090°] LY: ○ [090°] RY: ○ [090°] RX: ○ [090°] | Hold: B OFF A OFF Y OFF X OFF | Speed: 1.0x | Controller: Checking...
+        </div>
+
+        <!-- Global lock warning -->
+        <div class="global-lock" id="global-lock">
+            <div class="lock-icon">🔒</div>
+            <h3>All Servos Locked</h3>
+            <p>Global lock is active. No servo movements will be processed.</p>
+        </div>
+
+        <!-- Controller status -->
+        <div class="controller-grid">
+            <div class="controller-status" id="controller-status">
+                <h3>Controller Connection</h3>
+                <p id="controller-text">Checking controller status...</p>
+                <div style="margin-top: 10px;">
+                    <strong>Type:</strong> <span id="controller-type">Unknown</span><br>
+                    <strong>Path:</strong> <span id="controller-path">N/A</span>
+                </div>
+            </div>
+            
+            <div class="speed-control">
+                <h3>Servo Speed Control</h3>
+                <div class="speed-display">
+                    <span>Current Speed:</span>
+                    <span class="speed-value" id="speed-value">1.0x</span>
+                </div>
+                <p style="color: #718096; font-size: 14px;">
+                    Use controller shoulder buttons (L1/R1) to adjust speed.<br>
+                    Range: 0.1x to 2.0x
+                </p>
+            </div>
+        </div>
+
+        <!-- Servo position monitors -->
+        <h3>Servo Position Monitors</h3>
+        <div class="servo-controls-grid">
+            <div class="servo-monitor">
+                <div class="servo-header">
+                    <span class="servo-name">Left Stick X → Servo 0</span>
+                    <span class="angle-badge" id="servo0-angle">90°</span>
+                </div>
+                <div style="margin: 10px 0;">
+                    <span class="direction-arrows" id="servo0-arrow">○</span>
+                    Position: <span id="servo0-position">90°</span>
+                </div>
+                <div class="hold-indicator">
+                    <span class="hold-dot" id="hold0"></span>
+                    <span>Hold State: <span id="hold0-text">OFF</span></span>
+                </div>
+            </div>
+
+            <div class="servo-monitor">
+                <div class="servo-header">
+                    <span class="servo-name">Left Stick Y → Servo 1</span>
+                    <span class="angle-badge" id="servo1-angle">90°</span>
+                </div>
+                <div style="margin: 10px 0;">
+                    <span class="direction-arrows" id="servo1-arrow">○</span>
+                    Position: <span id="servo1-position">90°</span>
+                </div>
+                <div class="hold-indicator">
+                    <span class="hold-dot" id="hold1"></span>
+                    <span>Hold State: <span id="hold1-text">OFF</span></span>
+                </div>
+            </div>
+
+            <div class="servo-monitor">
+                <div class="servo-header">
+                    <span class="servo-name">Right Stick Y → Servo 2</span>
+                    <span class="angle-badge" id="servo2-angle">90°</span>
+                </div>
+                <div style="margin: 10px 0;">
+                    <span class="direction-arrows" id="servo2-arrow">○</span>
+                    Position: <span id="servo2-position">90°</span>
+                </div>
+                <div class="hold-indicator">
+                    <span class="hold-dot" id="hold2"></span>
+                    <span>Hold State: <span id="hold2-text">OFF</span></span>
+                </div>
+            </div>
+
+            <div class="servo-monitor">
+                <div class="servo-header">
+                    <span class="servo-name">Right Stick X → Servo 3</span>
+                    <span class="angle-badge" id="servo3-angle">90°</span>
+                </div>
+                <div style="margin: 10px 0;">
+                    <span class="direction-arrows" id="servo3-arrow">○</span>
+                    Position: <span id="servo3-position">90°</span>
+                </div>
+                <div class="hold-indicator">
+                    <span class="hold-dot" id="hold3"></span>
+                    <span>Hold State: <span id="hold3-text">OFF</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controller button mapping -->
+        <div class="controller-mapping">
+            <h3>Controller Button Mapping</h3>
+            <div class="mapping-grid">
+                <div class="mapping-item">
+                    <div class="mapping-title">Face Buttons</div>
+                <div class="mapping-item">
+                    <div class="mapping-title">Face Buttons</div>
+                    <div class="mapping-desc">A/○: Hold Servo 1<br>B/✕: Hold Servo 0<br>X/□: Hold Servo 2<br>Y/△: Hold Servo 3</div>
+                </div>
+                <div class="mapping-item">
+                    <div class="mapping-title">Shoulder Buttons</div>
+                    <div class="mapping-desc">L1: Decrease Speed<br>R1: Increase Speed<br>L2: Move All to 0°<br>R2: Move All to 180°</div>
+                </div>
+                <div class="mapping-item">
+                    <div class="mapping-title">D-Pad Controls</div>
+                    <div class="mapping-desc">Up: Center All (90°)<br>Down: Toggle Global Lock<br>Left: All to 0°<br>Right: All to 180°</div>
+                </div>
+                <div class="mapping-item">
+                    <div class="mapping-title">System Controls</div>
+                    <div class="mapping-desc">Start: Center All<br>Select: Reserved<br>PS/Xbox: Double-tap to Exit</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MPU Integration Display -->
+        <div class="mpu-integration">
+            <h3>MPU6050 Sensor Integration</h3>
+            <div class="mpu-data">
+                <div class="mpu-value">
+                    <div class="mpu-label">Accel X</div>
+                    <div class="mpu-number">
+                        <span class="direction-arrows" id="mpu-accel-x-arrow">○</span>
+                        <span id="mpu-accel-x">0.00</span>
+                    </div>
+                </div>
+                <div class="mpu-value">
+                    <div class="mpu-label">Accel Y</div>
+                    <div class="mpu-number">
+                        <span class="direction-arrows" id="mpu-accel-y-arrow">○</span>
+                        <span id="mpu-accel-y">0.00</span>
+                    </div>
+                </div>
+                <div class="mpu-value">
+                    <div class="mpu-label">Accel Z</div>
+                    <div class="mpu-number">
+                        <span class="direction-arrows" id="mpu-accel-z-arrow">○</span>
+                        <span id="mpu-accel-z">9.80</span>
+                    </div>
+                </div>
+                <div class="mpu-value">
+                    <div class="mpu-label">Gyro X</div>
+                    <div class="mpu-number">
+                        <span class="direction-arrows" id="mpu-gyro-x-arrow">○</span>
+                        <span id="mpu-gyro-x">0.00</span>
+                    </div>
+                </div>
+                <div class="mpu-value">
+                    <div class="mpu-label">Gyro Y</div>
+                    <div class="mpu-number">
+                        <span class="direction-arrows" id="mpu-gyro-y-arrow">○</span>
+                        <span id="mpu-gyro-y">0.00</span>
+                    </div>
+                </div>
+                <div class="mpu-value">
+                    <div class="mpu-label">Temperature</div>
+                    <div class="mpu-number">
+                        <span id="mpu-temp">25.0</span>°C
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let systemState = {{ state | tojson }};
+
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    systemState = data;
+                    updateConsoleDisplay();
+                    updateControllerStatus();
+                    updateServoDisplays();
+                    updateMPUDisplays();
+                    updateGlobalLock();
+                })
+                .catch(error => console.error('Status update error:', error));
+        }
+
+        function updateConsoleDisplay() {
+            const display = document.getElementById('console-display');
+            
+            // Get arrow directions
+            const getArrow = (value, neutral = 90) => {
+                const threshold = 5;
+                if (value < neutral - threshold) return "←";
+                if (value > neutral + threshold) return "→";
+                return "○";
+            };
+            
+            const getVerticalArrow = (value, neutral = 90) => {
+                const threshold = 5;
+                if (value < neutral - threshold) return "↑";
+                if (value > neutral + threshold) return "↓";
+                return "○";
+            };
+
+            // Build status string similar to servo_controller_best.py
+            const physicalPos = systemState.physical_servos;
+            const holdState = systemState.controller_state.hold_states;
+            const speed = systemState.controller_state.speed;
+            const controller = systemState.hardware.controller;
+            
+            const lx = getArrow(physicalPos[0]);
+            const ly = getVerticalArrow(physicalPos[1]);
+            const ry = getVerticalArrow(physicalPos[2]);
+            const rx = getArrow(physicalPos[3]);
+            
+            const holdB = holdState[0] ? "ON" : "OFF";
+            const holdA = holdState[1] ? "ON" : "OFF";
+            const holdY = holdState[2] ? "ON" : "OFF";
+            const holdX = holdState[3] ? "ON" : "OFF";
+            
+            const controllerStatus = controller.connected ? 
+                `${controller.type} CONNECTED` : 'DISCONNECTED';
+            
+            display.innerHTML = `
+                LX: ${lx} [${physicalPos[0].toString().padStart(3, '0')}°]  
+                LY: ${ly} [${physicalPos[1].toString().padStart(3, '0')}°]  
+                RY: ${ry} [${physicalPos[2].toString().padStart(3, '0')}°]  
+                RX: ${rx} [${physicalPos[3].toString().padStart(3, '0')}°]  |  
+                Hold: B ${holdB}  A ${holdA}  Y ${holdY}  X ${holdX}  |  
+                Speed: ${speed.toFixed(1)}x  |  
+                Controller: ${controllerStatus}
+            `;
+        }
+
+        function updateControllerStatus() {
+            const statusCard = document.getElementById('controller-status');
+            const statusText = document.getElementById('controller-text');
+            const typeSpan = document.getElementById('controller-type');
+            const pathSpan = document.getElementById('controller-path');
+            
+            const controller = systemState.hardware.controller;
+            
+            if (controller.connected) {
+                statusCard.className = 'controller-status connected';
+                statusText.textContent = 'Controller connected and operational';
+                typeSpan.textContent = controller.type;
+                pathSpan.textContent = controller.path || 'N/A';
+            } else {
+                statusCard.className = 'controller-status disconnected';
+                statusText.textContent = 'No controller detected';
+                typeSpan.textContent = 'None';
+                pathSpan.textContent = 'N/A';
+            }
+            
+            // Update speed display
+            document.getElementById('speed-value').textContent = 
+                systemState.controller_state.speed.toFixed(1) + 'x';
+        }
+
+        function updateServoDisplays() {
+            const physicalPos = systemState.physical_servos;
+            const holdStates = systemState.controller_state.hold_states;
+            
+            for (let i = 0; i < 4; i++) {
+                const angle = physicalPos[i];
+                const isHeld = holdStates[i];
+                
+                // Update angle displays
+                document.getElementById(`servo${i}-angle`).textContent = `${angle}°`;
+                document.getElementById(`servo${i}-position`).textContent = `${angle}°`;
+                
+                // Update direction arrows
+                const getArrow = (value, neutral = 90) => {
+                    const threshold = 5;
+                    if (i === 1 || i === 2) { // Vertical servos
+                        if (value < neutral - threshold) return "↑";
+                        if (value > neutral + threshold) return "↓";
+                    } else { // Horizontal servos
+                        if (value < neutral - threshold) return "←";
+                        if (value > neutral + threshold) return "→";
+                    }
+                    return "○";
+                };
+                
+                document.getElementById(`servo${i}-arrow`).textContent = getArrow(angle);
+                
+                // Update hold indicators
+                const holdDot = document.getElementById(`hold${i}`);
+                const holdText = document.getElementById(`hold${i}-text`);
+                
+                if (isHeld) {
+                    holdDot.classList.add('active');
+                    holdText.textContent = 'ON';
+                } else {
+                    holdDot.classList.remove('active');
+                    holdText.textContent = 'OFF';
+                }
+            }
+        }
+
+        function updateMPUDisplays() {
+            const mpu = systemState.mpu_data;
+            
+            // Helper function for direction arrows
+            const getDirectionArrow = (direction) => {
+                switch(direction) {
+                    case 'left': return '←';
+                    case 'right': return '→';
+                    case 'up': return '↑';
+                    case 'down': return '↓';
+                    default: return '○';
+                }
+            };
+            
+            // Update acceleration data
+            document.getElementById('mpu-accel-x').textContent = mpu.accel.x.toFixed(2);
+            document.getElementById('mpu-accel-y').textContent = mpu.accel.y.toFixed(2);
+            document.getElementById('mpu-accel-z').textContent = mpu.accel.z.toFixed(2);
+            
+            document.getElementById('mpu-accel-x-arrow').textContent = getDirectionArrow(mpu.direction.x);
+            document.getElementById('mpu-accel-y-arrow').textContent = getDirectionArrow(mpu.direction.y);
+            document.getElementById('mpu-accel-z-arrow').textContent = getDirectionArrow(mpu.direction.z);
+            
+            // Update gyro data
+            document.getElementById('mpu-gyro-x').textContent = mpu.gyro.x.toFixed(2);
+            document.getElementById('mpu-gyro-y').textContent = mpu.gyro.y.toFixed(2);
+            
+            const gyroXDir = mpu.gyro.x > 0.5 ? 'right' : mpu.gyro.x < -0.5 ? 'left' : 'neutral';
+            const gyroYDir = mpu.gyro.y > 0.5 ? 'up' : mpu.gyro.y < -0.5 ? 'down' : 'neutral';
+            
+            document.getElementById('mpu-gyro-x-arrow').textContent = getDirectionArrow(gyroXDir);
+            document.getElementById('mpu-gyro-y-arrow').textContent = getDirectionArrow(gyroYDir);
+            
+            // Update temperature
+            document.getElementById('mpu-temp').textContent = mpu.temp.toFixed(1);
+        }
+
+        function updateGlobalLock() {
+            const globalLock = document.getElementById('global-lock');
+            
+            if (systemState.controller_state.lock_state) {
+                globalLock.classList.add('active');
+            } else {
+                globalLock.classList.remove('active');
+            }
+        }
+
+        // Initialize and start updates
+        updateStatus();
+        setInterval(updateStatus, 100); // Update every 100ms for responsive controller monitoring
+    </script>
+</body>
+</html>
