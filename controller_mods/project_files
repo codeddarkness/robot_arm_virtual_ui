@@ -1,0 +1,9 @@
+servo_controller_best.py	# use for console ui
+controller_ps3.py		# use for ps3 controller
+controller_base.py		# use for xbox controller and button toggles info from text console : add to servo_controller_best.py console ui
+test_input.sh			# use for testing controllers
+servo_controller.py		# use for correct ps3 button mapping and text console features : add to servo_controller_best.py console ui
+servo_controller_ui_v13.py	# use for web ui controller
+mpu6050_monitor.py		# use for mpu visual display
+check_mpu6050.sh		# use to verify mpu device and display
+

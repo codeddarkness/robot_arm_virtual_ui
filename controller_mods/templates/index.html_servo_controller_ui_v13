@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servo Controller</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            font-size: 13px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 480px;
+            margin: 10px auto;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .main-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        @media (min-width: 768px) {
+            .main-layout {
+                flex-direction: row;
+            }
+        }
+        .left-panel {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        @media (min-width: 768px) {
+            .left-panel {
+                width: 240px;
+            }
+        }
+        .right-panel {
+            flex-grow: 1;
+        }
+        .mpu-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex: 1;
+        }
+        .mpu-card {
+            padding: 8px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            flex: 0 0 auto;
+            font-size: 0.9em;
+        }
+        .status-panel {
+            padding: 8px;
+            background-color: #eee;
+            border-radius: 5px;
+            flex: 0 0 auto;
+            font-size: 0.9em;
+        }
+        .servo-container {
+            display: grid;
+            grid-template-areas: 
+                "servo0 servo3"
+                "servo1 servo2";
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .servo-card {
+            width: auto;
+            max-width: none;
+            margin: 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            text-align: center;
+            background-color: #f9f9f9;
+            position: relative;
+            font-size: 0.9em;
+        }
+        .servo-card[data-channel="0"] { grid-area: servo0; }
+        .servo-card[data-channel="1"] { grid-area: servo1; }
+        .servo-card[data-channel="2"] { grid-area: servo2; }
+        .servo-card[data-channel="3"] { grid-area: servo3; }
+        .lock-button {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            padding: 0;
+            font-size: 14px;
+        }
+        .lock-icon {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+        }
+        .locked .lock-icon::before {
+            content: "🔒";
+        }
+        .unlocked .lock-icon::before {
+            content: "🔓";
+        }
+        .servo-dial {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto;
+            background-color: #eee;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .dial-marker {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            height: 50%;
+            width: 2px;
+            background-color: #0066cc;
+            transform-origin: top center;
+        }
+        .dial-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            background-color: #0066cc;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .joystick-container {
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .joystick {
+            width: 120px;
+            height: 120px;
+            background-color: #f0f0f0;
+            border-radius: 50%;
+            position: relative;
+            border: 1px solid #ccc;
+            touch-action: none;
+        }
+        .joystick-label {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        .joystick-knob {
+            width: 40px;
+            height: 40px;
+            background-color: #0066cc;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            cursor: grab;
+            user-select: none;
+        }
+        .joystick-info {
+            margin-top: 5px;
+            text-align: center;
+            font-size: 0.85em;
+        }
+        .direction-indicator {
+            display: inline-block;
+            width: 20px;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .log-container {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #eee;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 3px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .stop-button {
+            background-color: #f44336;
+        }
+        .hold-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+            background-color: #ccc;
+        }
+        .hold-on {
+            background-color: #ff0000;
+        }
+        .console-output {
+            font-family: monospace;
+            font-size: 11px;
+            background-color: #000;
+            color: #0f0;
+            padding: 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 10px;
+            height: 1.5em;
+        }
+        
+        .log-line {
+            font-family: monospace;
+            font-size: 10px;
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 4px;
+            border-radius: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 10px;
+            border-left: 3px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Servo Controller</h1>
+        
+        <div class="console-output" id="console-output">
+            Initializing...
+        </div>
+        
+        <div class="log-line" id="log-line">
+            System log: Starting up...
+        </div>
+        
+        <div class="main-layout">
+            <div class="left-panel">
+                <div class="mpu-panel">
+                    <div class="mpu-card">
+                        <h3>MPU6050 Acceleration</h3>
+                        <div><span class="direction-indicator" id="accel-x-dir">O</span> X: <span id="accel-x">0.00</span></div>
+                        <div><span class="direction-indicator" id="accel-y-dir">O</span> Y: <span id="accel-y">0.00</span></div>
+                        <div><span class="direction-indicator" id="accel-z-dir">O</span> Z: <span id="accel-z">0.00</span></div>
+                    </div>
+                    <div class="mpu-card">
+                        <h3>MPU6050 Gyroscope</h3>
+                        <div><span class="direction-indicator" id="gyro-x-dir">O</span> X: <span id="gyro-x">0.00</span></div>
+                        <div><span class="direction-indicator" id="gyro-y-dir">O</span> Y: <span id="gyro-y">0.00</span></div>
+                        <div><span class="direction-indicator" id="gyro-z-dir">O</span> Z: <span id="gyro-z">0.00</span></div>
+                    </div>
+                    <div class="status-panel">
+                        <h3>System Status</h3>
+                        <div id="mpu-status">MPU6050: Checking...</div>
+                        <div id="pca-status">PCA9685: Checking...</div>
+                        <div id="xbox-status">Xbox Controller: Disconnected</div>
+                        <div id="speed-status">Speed: 1.00</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <div class="joystick-container">
+                    <div>
+                        <div class="joystick-label">Left Joystick (Servos 0, 1)</div>
+                        <div class="joystick" id="left-joystick">
+                            <div class="joystick-knob" id="left-knob"></div>
+                        </div>
+                        <div class="joystick-info">X: <span id="left-x">0</span>, Y: <span id="left-y">0</span></div>
+                    </div>
+                    <div>
+                        <div class="joystick-label">Right Joystick (Servos 2, 3)</div>
+                        <div class="joystick" id="right-joystick">
+                            <div class="joystick-knob" id="right-knob"></div>
+                        </div>
+                        <div class="joystick-info">X: <span id="right-x">0</span>, Y: <span id="right-y">0</span></div>
+                    </div>
+                </div>
+                
+                <div class="servo-container">
+                    <!-- Servo dials will be added here dynamically -->
+                </div>
+                
+                <div style="text-align: center; margin: 15px 0;">
+                    <button id="stop-button" class="button stop-button">STOP ALL SERVOS</button>
+                    <div style="margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 5px; flex-wrap: wrap;">
+                        <input type="range" id="speed-slider" min="0.1" max="2.0" step="0.1" value="1.0" style="max-width: 150px;">
+                        <label for="speed-slider" style="font-size: 0.9em;">Speed: <span id="speed-value">1.0</span></label>
+                        <button id="reset-speed" class="button">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: center;">
+            <button id="toggle-log" class="button">Show Log</button>
+            <a href="/api/download-logs" class="button">Download Logs</a>
+        </div>
+        
+        <div id="log-container" class="log-container">
+            <h2>Data Log</h2>
+            <table id="log-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Servo 0</th>
+                        <th>Servo 1</th>
+                        <th>Servo 2</th>
+                        <th>Servo 3</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Log entries will be added here dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        // Create servo dials
+        const servoContainer = document.querySelector('.servo-container');
+        for (let i = 0; i < 4; i++) {
+            const servoCard = document.createElement('div');
+            servoCard.className = 'servo-card';
+            servoCard.setAttribute('data-channel', i);
+            servoCard.innerHTML = `
+                <h3>Servo Channel ${i}</h3>
+                <div class="servo-dial" id="servo-dial-${i}">
+                    <div class="dial-marker" id="dial-marker-${i}"></div>
+                    <div class="dial-center"></div>
+                </div>
+                <div id="servo-angle-${i}">Angle: 90°</div>
+                <div><span id="hold-indicator-${i}" class="hold-indicator"></span> Hold: OFF</div>
+            `;
+            servoContainer.appendChild(servoCard);
+        }
+        
+        // Direction arrows
+        const arrows = {
+            left: "←",
+            right: "→",
+            up: "↑",
+            down: "↓",
+            neutral: "O"
+        };
+        
+        // Virtual joystick functionality
+        function setupJoystick(joystickId, knobId, xDisplayId, yDisplayId, xServo, yServo) {
+            const joystick = document.getElementById(joystickId);
+            const knob = document.getElementById(knobId);
+            const xDisplay = document.getElementById(xDisplayId);
+            const yDisplay = document.getElementById(yDisplayId);
+            
+            let active = false;
+            let currentX = 0;
+            let currentY = 0;
+            
+            // Center position
+            const centerX = joystick.offsetWidth / 2;
+            const centerY = joystick.offsetHeight / 2;
+            
+            // Max distance from center (radius)
+            const maxDistance = (joystick.offsetWidth / 2) - (knob.offsetWidth / 2);
+            
+            function handleStart(e) {
+                active = true;
+                knob.style.cursor = 'grabbing';
+                
+                // Prevent any default action
+                e.preventDefault();
+                
+                // Get position
+                updatePosition(e);
+            }
+            
+            function handleMove(e) {
+                if (!active) return;
+                e.preventDefault();
+                updatePosition(e);
+            }
+            
+            function handleEnd() {
+                active = false;
+                knob.style.cursor = 'grab';
+                
+                // Return to center
+                knob.style.transform = 'translate(-50%, -50%)';
+                currentX = 0;
+                currentY = 0;
+                xDisplay.textContent = '0';
+                yDisplay.textContent = '0';
+                
+                // Set servos to center position (90 degrees)
+                if (xServo !== null) {
+                    fetch(`/api/servo/${xServo}/90`, { method: 'POST' });
+                }
+                if (yServo !== null) {
+                    fetch(`/api/servo/${yServo}/90`, { method: 'POST' });
+                }
+            }
+            
+            function updatePosition(e) {
+                if (!active) return;
+                
+                // Get position (support mouse and touch)
+                let clientX, clientY;
+                
+                if (e.type.startsWith('touch')) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+                
+                // Get position relative to joystick
+                const rect = joystick.getBoundingClientRect();
+                const x = clientX - rect.left - centerX;
+                const y = clientY - rect.top - centerY;
+                
+                // Calculate distance from center
+                const distance = Math.sqrt(x * x + y * y);
+                
+                // If distance is greater than max, normalize
+                let normX, normY;
+                
+                if (distance > maxDistance) {
+                    normX = (x / distance) * maxDistance;
+                    normY = (y / distance) * maxDistance;
+                } else {
+                    normX = x;
+                    normY = y;
+                }
+                
+                // Update knob position
+                knob.style.transform = `translate(calc(-50% + ${normX}px), calc(-50% + ${normY}px))`;
+                
+                // Calculate percentage (-100 to 100)
+                const percentX = Math.round((normX / maxDistance) * 100);
+                const percentY = Math.round((normY / maxDistance) * 100);
+                
+                // Invert Y for display (up is negative in client coords)
+                const displayY = -percentY;
+                
+                // Update display
+                xDisplay.textContent = percentX;
+                yDisplay.textContent = displayY;
+                
+                // Calculate servo angle (0-180)
+                // Map -100,100 to 0,180
+                const angleX = Math.round(((percentX + 100) / 200) * 180);
+                // Y is inverted for servos (joystick up = smaller angle)
+                const angleY = Math.round(((displayY + 100) / 200) * 180);
+                
+                // Update servos if values have changed enough
+                if (Math.abs(currentX - angleX) > 2 && xServo !== null) {
+                    fetch(`/api/servo/${xServo}/${angleX}`, { method: 'POST' });
+                    currentX = angleX;
+                }
+                
+                if (Math.abs(currentY - angleY) > 2 && yServo !== null) {
+                    fetch(`/api/servo/${yServo}/${angleY}`, { method: 'POST' });
+                    currentY = angleY;
+                }
+            }
+            
+            // Add event listeners for mouse
+            joystick.addEventListener('mousedown', handleStart);
+            document.addEventListener('mousemove', handleMove);
+            document.addEventListener('mouseup', handleEnd);
+            
+            // Add passive option to touch event listeners
+        joystick.addEventListener('touchstart', handleStart, { passive: false });
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleEnd, { passive: true });
+        }
+        
+        // Setup joysticks
+        // Left joystick: X = servo 0, Y = servo 1
+        setupJoystick('left-joystick', 'left-knob', 'left-x', 'left-y', 0, 1);
+        
+        // Right joystick: X = servo 3, Y = servo 2
+        setupJoystick('right-joystick', 'right-knob', 'right-x', 'right-y', 3, 2);
+        
+        // Setup servo dial click-and-move functionality
+        function setupServoDial(dialId, markerId, servoChannel) {
+            const dial = document.getElementById(dialId);
+            const marker = document.getElementById(markerId);
+            const centerX = dial.offsetWidth / 2;
+            const centerY = dial.offsetHeight / 2;
+            
+            function handleClick(e) {
+                const rect = dial.getBoundingClientRect();
+                const x = e.clientX - rect.left - centerX;
+                const y = e.clientY - rect.top - centerY;
+                
+                // Calculate angle from center (0 degrees is up, clockwise rotation)
+                let angle = Math.atan2(x, -y) * (180 / Math.PI);
+                
+                // Normalize angle to 0-180 range
+                if (angle < 0) angle += 360;
+                if (angle > 180) angle = 180;
+                if (angle < 0) angle = 0;
+                
+                // Update marker position
+                updateServoDialPosition(servoChannel, Math.round(angle));
+                
+                // Send to server
+                fetch(`/api/servo/${servoChannel}/${Math.round(angle)}`, { method: 'POST' });
+            }
+            
+            dial.addEventListener('click', handleClick);
+        }
+        
+        // Setup servo dials
+        for (let i = 0; i < 4; i++) {
+            setupServoDial(`servo-dial-${i}`, `dial-marker-${i}`, i);
+        }
+        
+        // Setup lock buttons
+        // Removed since they don't actually hold servo positions
+        
+        // Toggle log visibility
+        const toggleLogBtn = document.getElementById('toggle-log');
+        const logContainer = document.getElementById('log-container');
+        toggleLogBtn.addEventListener('click', () => {
+            if (logContainer.style.display === 'none' || !logContainer.style.display) {
+                logContainer.style.display = 'block';
+                toggleLogBtn.textContent = 'Hide Log';
+                fetchLogs();
+            } else {
+                logContainer.style.display = 'none';
+                toggleLogBtn.textContent = 'Show Log';
+            }
+        });
+        
+        // Stop button
+        const stopButton = document.getElementById('stop-button');
+        stopButton.addEventListener('click', () => {
+            fetch('/api/stop', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reset joystick positions
+                        document.getElementById('left-knob').style.transform = 'translate(-50%, -50%)';
+                        document.getElementById('right-knob').style.transform = 'translate(-50%, -50%)';
+                        document.getElementById('left-x').textContent = '0';
+                        document.getElementById('left-y').textContent = '0';
+                        document.getElementById('right-x').textContent = '0';
+                        document.getElementById('right-y').textContent = '0';
+                        
+                        // Update speed display
+                        document.getElementById('speed-value').textContent = '1.0';
+                        document.getElementById('speed-slider').value = 1.0;
+                    }
+                });
+        });
+
+        // Speed slider
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+        
+        speedSlider.addEventListener('input', () => {
+            const value = parseFloat(speedSlider.value).toFixed(1);
+            speedValue.textContent = value;
+            
+            // Send speed update to server
+            fetch(`/api/speed/${value}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('speed-status').textContent = `Speed: ${data.speed.toFixed(2)}`;
+                    }
+                });
+        });
+        
+        // Reset speed button
+        const resetSpeedBtn = document.getElementById('reset-speed');
+        resetSpeedBtn.addEventListener('click', () => {
+            speedSlider.value = 1.0;
+            speedValue.textContent = '1.0';
+            
+            fetch('/api/speed/1.0', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('speed-status').textContent = 'Speed: 1.00';
+                    }
+                });
+        });
+        
+        // Update servo dials
+        function updateServoDialPosition(channel, angle) {
+            const marker = document.getElementById(`dial-marker-${channel}`);
+            // Start from center (90 degrees) as 0 degrees, then rotate based on the angle
+            const rotationDegrees = angle - 90;
+            marker.style.transform = `rotate(${rotationDegrees}deg)`;
+            document.getElementById(`servo-angle-${channel}`).textContent = `Angle: ${angle}°`;
+        }
+        
+        // Update hold indicators
+        function updateHoldIndicator(channel, isHolding) {
+            const indicator = document.getElementById(`hold-indicator-${channel}`);
+            if (!indicator) return; // Skip if element doesn't exist
+            
+            if (isHolding) {
+                indicator.classList.add('hold-on');
+            } else {
+                indicator.classList.remove('hold-on');
+            }
+            
+            const holdText = indicator.nextSibling;
+            if (holdText) {
+                holdText.textContent = ` Hold: ${isHolding ? 'ON' : 'OFF'}`;
+            }
+        }
+        
+        // Update MPU data
+        function updateMPUData(accel, gyro) {
+            // Update accelerometer values
+            document.getElementById('accel-x').textContent = accel[0].toFixed(2);
+            document.getElementById('accel-y').textContent = accel[1].toFixed(2);
+            document.getElementById('accel-z').textContent = accel[2].toFixed(2);
+            
+            // Update gyroscope values
+            document.getElementById('gyro-x').textContent = gyro[0].toFixed(2);
+            document.getElementById('gyro-y').textContent = gyro[1].toFixed(2);
+            document.getElementById('gyro-z').textContent = gyro[2].toFixed(2);
+            
+            // Update direction indicators for accelerometer
+            const accelXDir = document.getElementById('accel-x-dir');
+            const accelYDir = document.getElementById('accel-y-dir');
+            const accelZDir = document.getElementById('accel-z-dir');
+            
+            accelXDir.textContent = accel[0] < -4 ? arrows.left : accel[0] > 4 ? arrows.right : arrows.neutral;
+            accelYDir.textContent = accel[1] > 2 ? arrows.up : accel[1] < -2 ? arrows.down : arrows.neutral;
+            accelZDir.textContent = accel[2] > 10 ? arrows.up : accel[2] < 6 ? arrows.down : arrows.neutral;
+            
+            // Update direction indicators for gyroscope
+            const gyroXDir = document.getElementById('gyro-x-dir');
+            const gyroYDir = document.getElementById('gyro-y-dir');
+            const gyroZDir = document.getElementById('gyro-z-dir');
+            
+            gyroXDir.textContent = gyro[0] < -1 ? arrows.left : gyro[0] > 1 ? arrows.right : arrows.neutral;
+            gyroYDir.textContent = gyro[1] > 1 ? arrows.up : gyro[1] < -1 ? arrows.down : arrows.neutral;
+            gyroZDir.textContent = gyro[2] < -1 ? arrows.left : gyro[2] > 1 ? arrows.right : arrows.neutral;
+        }
+        
+        // Update console output
+        function updateConsoleOutput(data) {
+            const consoleOutput = document.getElementById('console-output');
+            
+            // Direction arrows
+            const lx = data.servo_positions[0] < 80 ? arrows.left : data.servo_positions[0] > 100 ? arrows.right : arrows.neutral;
+            const ly = data.servo_positions[1] < 80 ? arrows.up : data.servo_positions[1] > 100 ? arrows.down : arrows.neutral;
+            const ry = data.servo_positions[2] < 80 ? arrows.up : data.servo_positions[2] > 100 ? arrows.down : arrows.neutral;
+            const rx = data.servo_positions[3] < 80 ? arrows.left : data.servo_positions[3] > 100 ? arrows.right : arrows.neutral;
+            
+            // Direction arrows for gyroscope
+            const gyroX = data.mpu_gyro[0] < -1 ? arrows.left : data.mpu_gyro[0] > 1 ? arrows.right : arrows.neutral;
+            const gyroY = data.mpu_gyro[1] > 1 ? arrows.up : data.mpu_gyro[1] < -1 ? arrows.down : arrows.neutral;
+            const gyroZ = data.mpu_gyro[2] < -1 ? arrows.left : data.mpu_gyro[2] > 1 ? arrows.right : arrows.neutral;
+            
+            // Format hold status
+            const holdStatus = [
+                `${data.hold_state[0] ? 'ON' : 'OFF'}`,
+                `${data.hold_state[1] ? 'ON' : 'OFF'}`,
+                `${data.hold_state[2] ? 'ON' : 'OFF'}`,
+                `${data.hold_state[3] ? 'ON' : 'OFF'}`
+            ];
+            
+            // Format I2C status
+            const i2cDevices = Object.entries(data.i2c_status.devices || {}).map(([addr, name]) =>
+                `0x${parseInt(addr).toString(16).toUpperCase()}:${name.charAt(0)}`
+            ).join(',');
+            
+            const i2cStatusStr = `I2C: ${data.i2c_status.connected ? '+' : '-'} ${i2cDevices}`;
+            
+            // Create single line status display with spaced values
+            const statusStr = (
+                `LX: ${lx} ${data.servo_positions[0]}  LY: ${ly} ${data.servo_positions[1]}  ` +
+                `RY: ${ry} ${data.servo_positions[2]}  RX: ${rx} ${data.servo_positions[3]}  |  ` +
+                `Gyro: ${gyroX} X ${data.mpu_gyro[0].toFixed(1)}  ${gyroY} Y ${data.mpu_gyro[1].toFixed(1)}  ${gyroZ} Z ${data.mpu_gyro[2].toFixed(1)}  |  ` +
+                `Hold: B ${holdStatus[0]}  A ${holdStatus[1]}  Y ${holdStatus[2]}  X ${holdStatus[3]}  S: ${data.speed.toFixed(1)}  |  ${i2cStatusStr}`
+            );
+            
+            consoleOutput.textContent = statusStr;
+        }
+        
+        // Update system status
+        function updateSystemStatus(data) {
+            // MPU Status
+            const mpuStatus = document.getElementById('mpu-status');
+            const mpuConnected = data.i2c_status.devices && Object.values(data.i2c_status.devices).some(name => name === "MPU6050");
+            mpuStatus.textContent = `MPU6050: ${mpuConnected ? 'Connected' : 'Disconnected'}`;
+            
+            // PCA Status
+            const pcaStatus = document.getElementById('pca-status');
+            const pcaConnected = data.i2c_status.devices && Object.values(data.i2c_status.devices).some(name => name === "PCA9685");
+            pcaStatus.textContent = `PCA9685: ${pcaConnected ? 'Connected' : 'Disconnected'}`;
+            
+            // Xbox Status
+            const xboxStatus = document.getElementById('xbox-status');
+            xboxStatus.textContent = `Xbox Controller: ${data.xbox_status ? 'Connected' : 'Disconnected'}`;
+        }
+        
+        // Fetch logs
+        function fetchLogs() {
+            fetch('/api/logs')
+                .then(response => response.json())
+                .then(logs => {
+                    const tbody = document.querySelector('#log-table tbody');
+                    tbody.innerHTML = '';
+                    
+                    logs.forEach(log => {
+                        const row = document.createElement('tr');
+                        
+                        const timeCell = document.createElement('td');
+                        timeCell.textContent = log.timestamp;
+                        row.appendChild(timeCell);
+                        
+                        for (let i = 0; i < 4; i++) {
+                            const angleCell = document.createElement('td');
+                            angleCell.textContent = log.servo_positions[i];
+                            row.appendChild(angleCell);
+                        }
+                        
+                        tbody.appendChild(row);
+                    });
+                });
+        }
+        
+        // Poll status endpoint
+        function pollStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    // Update servo positions
+                    for (let channel = 0; channel < 4; channel++) {
+                        updateServoDialPosition(channel, data.servo_positions[channel]);
+                        updateHoldIndicator(channel, data.hold_state[channel]);
+                    }
+                    
+                    // Update MPU data
+                    updateMPUData(data.mpu_accel, data.mpu_gyro);
+                    
+                    // Update system status
+                    updateSystemStatus(data);
+                    
+                    // Update speed status
+                    document.getElementById('speed-status').textContent = `Speed: ${data.speed.toFixed(2)}`;
+                    
+                    // Update console output
+                    updateConsoleOutput(data);
+                    
+                    // Update log line with device status
+                    updateLogLine(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching status:', error);
+                })
+                .finally(() => {
+                    // Poll again after a delay
+                    setTimeout(pollStatus, 100);
+                });
+        }
+        
+        // Update log line with device status
+        function updateLogLine(data) {
+            const logLine = document.getElementById('log-line');
+            let deviceStatus = '';
+            
+            // Check MPU status
+            const mpuConnected = data.i2c_status.devices && 
+                Object.entries(data.i2c_status.devices).some(([addr, name]) => name === "MPU6050");
+            
+            // Check PCA status
+            const pcaConnected = data.i2c_status.devices && 
+                Object.entries(data.i2c_status.devices).some(([addr, name]) => name === "PCA9685");
+            
+            deviceStatus = `I2C: ${pcaConnected ? 'PCA9685+' : 'PCA9685-'} ${mpuConnected ? 'MPU6050+' : 'MPU6050-'} | XBOX: ${data.xbox_status ? '+' : '-'}`;
+            
+            logLine.textContent = `System log: ${deviceStatus}`;
+        }
+        
+        // Start polling
+        pollStatus();
+    </script>
+</body>
+</html>

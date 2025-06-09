@@ -1,12 +1,7 @@
-# Robot Arm Virtual UI v0.3.1-1
-
 import os
 import logging
 import socket
 from flask import Flask, render_template, jsonify, request
-
-# Import development route
-from dev_route import add_dev_route
 
 # Setup logging
 logging.basicConfig(filename='robot_arm.log', level=logging.INFO,
@@ -14,9 +9,6 @@ logging.basicConfig(filename='robot_arm.log', level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-
-# Add development route
-add_dev_route(app)
 
 # Robot arm state
 arm_state = {
@@ -61,10 +53,7 @@ def find_available_port(start_port=5000, max_attempts=10):
 if __name__ == '__main__':
     # Find available port
     port = find_available_port()
-    print(f"Starting Robot Arm Virtual UI v0.3.1-1 on http://localhost:{port}")
-    print(f"Development version available at http://localhost:{port}/dev")
+    print(f"Starting robot arm server on http://localhost:{port}")
     print("Press Ctrl+C to exit")
     print("Current servo positions will be displayed below:")
-    
-    # Use host='0.0.0.0' to allow connections from other devices on the network
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(debug=True, port=port)

@@ -1,4 +1,3 @@
-// Robot Arm Virtual UI v0.2.1-1
 // Global variables
 let scene, camera, renderer;
 let armBase, armLower, armUpper, armGripper;
@@ -13,7 +12,7 @@ function initScene() {
     scene.background = new THREE.Color(0xf0f0f0);
     
     // Create camera
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / (window.innerHeight * 0.8), 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / 400, 0.1, 1000);
     camera.position.set(0, 5, 10);
     camera.lookAt(0, 0, 0);
     
@@ -44,7 +43,7 @@ function initScene() {
     // Handle window resize
     window.addEventListener('resize', () => {
         renderer.setSize(document.getElementById('model-container').offsetWidth, 400);
-        camera.aspect = document.getElementById('model-container').offsetWidth / document.getElementById('model-container').offsetHeight;
+        camera.aspect = document.getElementById('model-container').offsetWidth / 400;
         camera.updateProjectionMatrix();
     });
     
