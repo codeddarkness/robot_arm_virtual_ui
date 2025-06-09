@@ -1,7 +1,12 @@
 import os
 import logging
 import socket
-from flask import Flask, render_template, jsonify, request
+try:
+    from flask import Flask, render_template, jsonify, request
+except ImportError as e:
+    print(f"Flask import error: {e}")
+    print("Please check Flask installation: pip install Flask")
+    exit(1)
 
 # Setup logging
 logging.basicConfig(filename='robot_arm.log', level=logging.INFO,
@@ -10,19 +15,6 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-<<<<<<< HEAD
-=======
-# Import development route
-try:
-    from dev_route import add_dev_route
-    # Add development route
-    add_dev_route(app)
-    has_dev_route = True
-except ImportError:
-    has_dev_route = False
-    logger.warning("Development route module not found. Dev page will not be available.")
-
->>>>>>> 5542a9d4294fedd071fb1b5a9fc5887d910ccee9
 # Robot arm state
 arm_state = {
     'channel0': 135,  # Default to middle position (0-270 degrees)
@@ -33,7 +25,11 @@ arm_state = {
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        logger.error(f"Error rendering template: {e}")
+        return f"Error: {e}", 500
 
 @app.route('/api/servo', methods=['GET'])
 def get_servo_positions():
@@ -41,58 +37,51 @@ def get_servo_positions():
 
 @app.route('/api/servo', methods=['POST'])
 def update_servo_positions():
-    data = request.json
-    for channel in range(4):
-        key = f'channel{channel}'
-        if key in data:
-            # Ensure value is within 0-270 range
-            arm_state[key] = max(0, min(270, data[key]))
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
             
-    # Log the current position
-    logger.info(f"Servo positions updated: {arm_state}")
-    print(f"\rPositions: Ch0: {arm_state['channel0']}° | Ch1: {arm_state['channel1']}° | " +
-          f"Ch2: {arm_state['channel2']}° | Ch3: {arm_state['channel3']}°", end='')
-    
-    return jsonify({"status": "success", "state": arm_state})
+        for channel in range(4):
+            key = f'channel{channel}'
+            if key in data:
+                # Ensure value is within 0-270 range
+                value = data[key]
+                if isinstance(value, (int, float)):
+                    arm_state[key] = max(0, min(270, int(value)))
+                
+        # Log the current position
+        logger.info(f"Servo positions updated: {arm_state}")
+        print(f"\rPositions: Ch0: {arm_state['channel0']}° | Ch1: {arm_state['channel1']}° | " +
+              f"Ch2: {arm_state['channel2']}° | Ch3: {arm_state['channel3']}°", end='')
+        
+        return jsonify({"status": "success", "state": arm_state})
+    except Exception as e:
+        logger.error(f"Error updating servo positions: {e}")
+        return jsonify({"error": str(e)}), 500
 
 def find_available_port(start_port=5000, max_attempts=10):
     """Find an available port starting from start_port"""
     for port in range(start_port, start_port + max_attempts):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(('localhost', port)) != 0:
-                return port
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                if s.connect_ex(('localhost', port)) != 0:
+                    return port
+        except Exception:
+            continue
     return start_port  # Default fallback
 
-def get_ip():
-    """Get local IP address for network access"""
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        # Connect to a public address to determine the interface
-        s.connect(('8.8.8.8', 1))
-        IP = s.getsockname()[0]
-    except Exception:
-        IP = '127.0.0.1'
-    finally:
-        s.close()
-    return IP
-
 if __name__ == '__main__':
-    # Find available port
-    port = find_available_port()
-<<<<<<< HEAD
-    print(f"Starting robot arm server on http://localhost:{port}")
-=======
-    
-    # Get network IP for display
-    network_ip = get_ip()
-
-    print(f"Starting Robot Arm Virtual UI v0.3.1-1 on http://localhost:{port}")
-    print(f"Network access URL: http://{network_ip}:{port}")
-    
-    if has_dev_route:
-        print(f"Development version: http://{network_ip}:{port}/dev")
-    
->>>>>>> 5542a9d4294fedd071fb1b5a9fc5887d910ccee9
-    print("Press Ctrl+C to exit")
-    print("Current servo positions will be displayed below:")
-    app.run(debug=True, port=port)
+    try:
+        # Find available port
+        port = find_available_port()
+        print(f"Starting robot arm server on http://localhost:{port}")
+        print("Press Ctrl+C to exit")
+        print("Current servo positions will be displayed below:")
+        
+        # Run with more compatible settings
+        app.run(debug=False, port=port, host='0.0.0.0', threaded=True)
+    except Exception as e:
+        print(f"Error starting server: {e}")
+        logger.error(f"Server startup error: {e}")
+        exit(1)
