@@ -10,6 +10,19 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+<<<<<<< HEAD
+=======
+# Import development route
+try:
+    from dev_route import add_dev_route
+    # Add development route
+    add_dev_route(app)
+    has_dev_route = True
+except ImportError:
+    has_dev_route = False
+    logger.warning("Development route module not found. Dev page will not be available.")
+
+>>>>>>> 5542a9d4294fedd071fb1b5a9fc5887d910ccee9
 # Robot arm state
 arm_state = {
     'channel0': 135,  # Default to middle position (0-270 degrees)
@@ -50,10 +63,36 @@ def find_available_port(start_port=5000, max_attempts=10):
                 return port
     return start_port  # Default fallback
 
+def get_ip():
+    """Get local IP address for network access"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Connect to a public address to determine the interface
+        s.connect(('8.8.8.8', 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
+
 if __name__ == '__main__':
     # Find available port
     port = find_available_port()
+<<<<<<< HEAD
     print(f"Starting robot arm server on http://localhost:{port}")
+=======
+    
+    # Get network IP for display
+    network_ip = get_ip()
+
+    print(f"Starting Robot Arm Virtual UI v0.3.1-1 on http://localhost:{port}")
+    print(f"Network access URL: http://{network_ip}:{port}")
+    
+    if has_dev_route:
+        print(f"Development version: http://{network_ip}:{port}/dev")
+    
+>>>>>>> 5542a9d4294fedd071fb1b5a9fc5887d910ccee9
     print("Press Ctrl+C to exit")
     print("Current servo positions will be displayed below:")
     app.run(debug=True, port=port)
